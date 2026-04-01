@@ -17,6 +17,7 @@ async function syncWMAllDevices(req, res) {
   const { start_date, end_date } = req.body || {};
 
   if (start_date && end_date) {
+    //POST METHOD WITH BODY
     startTS = Math.floor(
       new Date(`${start_date}T00:00:00+07:00`).getTime() / 1000,
     );
@@ -24,10 +25,19 @@ async function syncWMAllDevices(req, res) {
 
     console.log(`[SYNC INIT] Mode Custom Range: ${start_date} s/d ${end_date}`);
   } else {
-    endTS = Math.floor(Date.now() / 1000);
-    startTS = endTS - 24 * 60 * 60;
-
-    console.log(`[SYNC INIT] Mode Default: 24 Jam Terakhir`);
+    const dateYesterday = new Date();
+    dateYesterday.setDate(dateYesterday.getDate() - 1);
+    const pad = (n) => String(n).padStart(2, "0");
+    const ymdYesterday = `${dateYesterday.getFullYear()}-${pad(dateYesterday.getMonth() + 1)}-${pad(dateYesterday.getDate())}`;
+    startTS = Math.floor(
+      new Date(`${ymdYesterday}T00:00:00+07:00`).getTime() / 1000,
+    );
+    endTS = Math.floor(
+      new Date(`${ymdYesterday}T23:59:59+07:00`).getTime() / 1000,
+    );
+    console.log(
+      `[SYNC INIT] Mode Default: Khusus Kemarin (${ymdYesterday} 00:00:00 s/d 23:59:59)`,
+    );
   }
 
   try {
