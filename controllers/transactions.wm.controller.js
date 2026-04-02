@@ -1,4 +1,7 @@
-const { getDevicesFromDB } = require("../services/device.service");
+const {
+  getDevicesFromDB,
+  getDeviceByName,
+} = require("../services/device.service");
 const { fetchWMData } = require("../services/wmApi.service");
 const {
   insertWMData,
@@ -141,4 +144,113 @@ async function syncWMAllDevices(req, res) {
   }
 }
 
-module.exports = { syncWMAllDevices };
+async function getTrxByDeviceName(req, res) {
+  const { deviceName } = req.body;
+
+  if (!deviceName) {
+    return res
+      .status(400)
+      .json({ success: false, message: "deviceName is required" });
+  }
+
+  let logId;
+  let totalFetched = 0;
+  let totalSyncInserted = 0;
+  let totalFailed = 0;
+
+  const endTS = Math.floor(Date.now() / 1000);
+  const startTS = endTS - 24 * 60 * 60; // default 24 jam ke belakang
+
+  try {
+    logId = await createSyncLog();
+
+    const device = await getDeviceByName(deviceName);
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Device with name ${deviceName} not found`,
+      });
+    }
+    const hargaMap = await getHargaMap();
+    const deviceWilayah = device.wilayah
+      ? device.wilayah.toLowerCase().trim()
+      : "tidak_ada_wilayah";
+    const hargaDevice = hargaMap[deviceWilayah] || 0;
+
+    console.log(
+      `[SYNC 1 DEVICE] Memproses: ${deviceName} | Wilayah: ${deviceWilayah} | Harga: ${hargaDevice}`,
+    );
+    let page = 1;
+    while (true) {
+      try {
+        const apiResult = await fetchWMData(
+          device.device_name,
+          startTS,
+          endTS,
+          page,
+        );
+        const data = apiResult.data;
+        const list = data?.list || [];
+
+        if (list.length === 0) break;
+        totalFetched += list.length;
+
+        const newlyInsertedRows = await insertWMData(
+          device.device_id,
+          device.merchant_id,
+          list,
+          hargaDevice,
+        );
+        totalSyncInserted += newlyInsertedRows.length;
+
+        if (newlyInsertedRows.length > 0) {
+          await forwardToExternalAPI(newlyInsertedRows);
+        }
+
+        if (page >= (data?.pages || 1)) break;
+        page++;
+      } catch (err) {
+        console.error(`[Device: ${device.device_name}] Error:`, err.message);
+        totalFailed += 1;
+        break;
+      }
+    }
+
+    await finishSyncLog(
+      logId,
+      totalFetched,
+      totalSyncInserted,
+      totalFailed,
+      "no error",
+      "SUCCESS",
+    );
+
+    res.json({
+      success: true,
+      device: device.device_name,
+      inserted: totalSyncInserted,
+      message:
+        totalSyncInserted === 0
+          ? "Tidak ada transaksi baru di 24 jam terakhir"
+          : "Transaksi berhasil ditarik dan di-forward",
+    });
+  } catch (err) {
+    console.error(err);
+    if (logId) {
+      await finishSyncLog(
+        logId,
+        totalFetched,
+        totalSyncInserted,
+        totalFailed,
+        err.message,
+        "FAILED",
+      );
+    }
+    res
+      .status(500)
+      .json({ success: false, message: "WM sync failed", error: err.message });
+  }
+}
+
+module.exports = { syncWMAllDevices, getTrxByDeviceName, forwardToExternalAPI };

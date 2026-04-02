@@ -83,8 +83,17 @@ async function upsertDevices(deviceList, defaultMerchantId = 1010101) {
   }
 }
 
+async function getDeviceByName(deviceName) {
+  const result = await pool.query(
+    `SELECT device_id, device_name, merchant_id , wilayah FROM tb_merchant_device WHERE device_name = $1`,
+    [deviceName],
+  );
+  return result.rows[0];
+}
+
 module.exports = {
   upsertDevices,
   getDevicesFromDB,
   insertDevice,
+  getDeviceByName,
 };
