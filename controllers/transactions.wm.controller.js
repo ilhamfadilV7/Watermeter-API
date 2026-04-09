@@ -8,7 +8,11 @@ const {
   getHargaMap,
   forwardToExternalAPI,
 } = require("../services/trx.service");
-const { createSyncLog, finishSyncLog } = require("../services/syncLog.service");
+const {
+  createSyncLog,
+  finishSyncLog,
+  getLogsByDeviceName,
+} = require("../services/syncLog.service");
 
 async function syncWMAllDevices(req, res) {
   let logId;
@@ -44,7 +48,7 @@ async function syncWMAllDevices(req, res) {
   }
 
   try {
-    logId = await createSyncLog();
+    logId = await createSyncLog("ALL_DEVICES");
     const devices = await getDevicesFromDB();
 
     const hargaMap = await getHargaMap();
@@ -159,10 +163,10 @@ async function getTrxByDeviceName(req, res) {
   let totalFailed = 0;
 
   const endTS = Math.floor(Date.now() / 1000);
-  const startTS = endTS - 24 * 60 * 60; // default 24 jam ke belakang
+  const startTS = endTS - 24 * 60 * 60;
 
   try {
-    logId = await createSyncLog();
+    logId = await createSyncLog(deviceName);
 
     const device = await getDeviceByName(deviceName);
 
@@ -253,4 +257,37 @@ async function getTrxByDeviceName(req, res) {
   }
 }
 
-module.exports = { syncWMAllDevices, getTrxByDeviceName, forwardToExternalAPI };
+async function fetchDeviceSyncLogs(req, res) {
+  try {
+    const { deviceName } = req.params;
+
+    if (!deviceName) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter deviceName wajib disertakan pada URL.",
+      });
+    }
+
+    const logs = await getLogsByDeviceName(deviceName);
+
+    res.json({
+      success: true,
+      message: "Berhasil mengambil histori log",
+      data: logs,
+    });
+  } catch (error) {
+    console.error("Error fetching sync logs:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan sistem saat mengambil histori log.",
+      error: error.message,
+    });
+  }
+}
+
+module.exports = {
+  syncWMAllDevices,
+  getTrxByDeviceName,
+  forwardToExternalAPI,
+  fetchDeviceSyncLogs,
+};

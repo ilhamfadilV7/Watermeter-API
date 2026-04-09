@@ -156,15 +156,30 @@ async function forwardToExternalAPI(insertedRows) {
     };
 
     try {
-      await axios.post(TARGET_URL, payload, {
-        headers: { "Content-Type": "application/json" },
+      const result = await axios.post(TARGET_URL, payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
         timeout: 10000,
       });
       console.log(`[SEND TRX SUCCESS] Trx ID: ${row.transaction_id}`);
     } catch (err) {
-      console.error(
-        `[SEND TRX FAILED] Trx ID: ${row.transaction_id} | Err: ${err.message}`,
-      );
+      if (err.response) {
+        console.error(`[SEND TRX FAILED] Trx ID: ${row.transaction_id}`);
+        console.error(`  -> Status: ${err.response.status}`);
+        console.error(
+          `  -> Detail:`,
+          JSON.stringify(err.response.data, null, 2),
+        );
+      } else if (err.request) {
+        console.error(
+          `[SEND TRX FAILED] Trx ID: ${row.transaction_id} | Err: Server tidak memberikan respon (Timeout/Down).`,
+        );
+      } else {
+        console.error(
+          `[SEND TRX FAILED] Trx ID: ${row.transaction_id} | Err: ${err.message}`,
+        );
+      }
     }
   }
 }
