@@ -7,6 +7,7 @@ const {
   insertWMData,
   getHargaMap,
   forwardToExternalAPI,
+  getWmPic,
 } = require("../services/trx.service");
 const {
   createSyncLog,
@@ -285,9 +286,34 @@ async function fetchDeviceSyncLogs(req, res) {
   }
 }
 
+async function getPic(req, res) {
+  const { trxid } = req.params;
+  try {
+    const pic = await getWmPic(trxid);
+    if (!pic) {
+      return res.status(404).json({
+        success: false,
+        message: `data tidak ditemukan`,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: pic,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan sistem saat mengambil data",
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   syncWMAllDevices,
   getTrxByDeviceName,
   forwardToExternalAPI,
   fetchDeviceSyncLogs,
+  getPic,
 };

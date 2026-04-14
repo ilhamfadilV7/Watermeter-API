@@ -228,9 +228,27 @@ async function getTrxByDevicename(startTs, endTs, page = 1) {
   }
 }
 
+async function getWmPic(trxid) {
+  const query = `
+  SELECT wm_pic, value, increment FROM tb_trx_merchant WHERE transaction_id = $1;
+  `;
+  const result = await pool.query(query, [trxid]);
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  if (!result.rows[0].wm_pic) {
+    return null;
+  }
+
+  return result.rows[0];
+}
+
 module.exports = {
   insertWMData,
   getHargaMap,
   forwardToExternalAPI,
   getTrxByDevicename,
+  getWmPic,
 };
