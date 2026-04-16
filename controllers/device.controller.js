@@ -1,5 +1,9 @@
 const { fetchDeviceList } = require("../services/deviceApi.service");
-const { upsertDevices, insertDevice } = require("../services/device.service");
+const {
+  upsertDevices,
+  insertDevice,
+  getAllLocalDevices,
+} = require("../services/device.service");
 
 async function syncDevices(req, res) {
   try {
@@ -83,7 +87,25 @@ async function registerDevice(req, res) {
   }
 }
 
+//get all device
+async function getAllDevices(req, res) {
+  try {
+    const devices = await getAllLocalDevices();
+    res.json({
+      success: true,
+      devices: devices,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch devices",
+    });
+  }
+}
+
 module.exports = {
   syncDevices,
   registerDevice,
+  getAllDevices,
 };

@@ -91,9 +91,22 @@ async function getDeviceByName(deviceName) {
   return result.rows[0];
 }
 
+async function getAllLocalDevices() {
+  const result = await pool.query(`
+    SELECT device_name, type, created_time, wilayah FROM tb_merchant_device
+  `);
+
+  if (result.rowCount === 0) {
+    return [];
+  }
+
+  return result.rows;
+}
+
 module.exports = {
   upsertDevices,
   getDevicesFromDB,
   insertDevice,
   getDeviceByName,
+  getAllLocalDevices,
 };
