@@ -93,7 +93,7 @@ async function getDeviceByName(deviceName) {
 
 async function getAllLocalDevices() {
   const result = await pool.query(`
-    SELECT device_name, type, created_time, wilayah FROM tb_merchant_device
+    SELECT device_name, serial_number, type, created_time, wilayah FROM tb_merchant_device
   `);
 
   if (result.rowCount === 0) {
