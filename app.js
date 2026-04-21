@@ -8,6 +8,7 @@ const deviceRoute = require("./routes/device.route");
 const trxRoute = require("./routes/trx.route");
 const scheduleRoute = require("./routes/schedule.route");
 const { initAllSchedules } = require("./services/scheduler.service");
+const getHarga = require("./routes/harga.route");
 
 const app = express();
 app.use(express.json());
@@ -23,6 +24,7 @@ app.use("/api", require("./routes/api.route"));
 app.use("/api", deviceRoute);
 app.use("/api", trxRoute);
 app.use("/api", scheduleRoute);
+app.use("/api", getHarga);
 
 app.use((req, res, next) => {
   next(createError.NotFound());
