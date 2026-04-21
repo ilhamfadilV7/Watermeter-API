@@ -6,6 +6,8 @@ require("dotenv").config();
 const pool = require("./config/database");
 const deviceRoute = require("./routes/device.route");
 const trxRoute = require("./routes/trx.route");
+const scheduleRoute = require("./routes/schedule.route");
+const { initAllSchedules } = require("./services/scheduler.service");
 
 const app = express();
 app.use(express.json());
@@ -20,6 +22,7 @@ app.get("/", async (req, res, next) => {
 app.use("/api", require("./routes/api.route"));
 app.use("/api", deviceRoute);
 app.use("/api", trxRoute);
+app.use("/api", scheduleRoute);
 
 app.use((req, res, next) => {
   next(createError.NotFound());
@@ -33,5 +36,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 @ http://localhost:${PORT}`));
+const PORT = process.env.PORT;
+app.listen(PORT, async () => {
+  console.log(`🚀 @ http://localhost:${PORT}`);
+  await initAllSchedules();
+});
