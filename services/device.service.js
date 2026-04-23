@@ -12,9 +12,10 @@ async function insertDevice(device) {
         status,
         wilayah,        
         type,
-        serial_number
+        serial_number,
+        nama_wp
       )
-      VALUES ($1, $2, $3, $4 , $5, $6 , $7)
+      VALUES ($1, $2, $3, $4 , $5, $6 , $7, $8)
       ON CONFLICT (merchant_id, device_id, serial_number) DO NOTHING
     `;
 
@@ -26,6 +27,7 @@ async function insertDevice(device) {
       device.wilayah,
       device.type,
       device.serialNumber,
+      device.nama_wp,
     ]);
     return result.rowCount;
   } finally {
@@ -35,7 +37,7 @@ async function insertDevice(device) {
 
 async function getDevicesFromDB() {
   const result = await pool.query(`
-    SELECT device_id, device_name, merchant_id , wilayah FROM tb_merchant_device
+    SELECT device_id, device_name, merchant_id , wilayah, serial_number, nama_wp FROM tb_merchant_device
   `);
   return result.rows;
 }
@@ -85,7 +87,7 @@ async function upsertDevices(deviceList, defaultMerchantId = 1010101) {
 
 async function getDeviceByName(deviceName) {
   const result = await pool.query(
-    `SELECT device_id, device_name, merchant_id , wilayah FROM tb_merchant_device WHERE device_name = $1`,
+    `SELECT device_id, device_name, merchant_id , wilayah, serial_number, nama_wp FROM tb_merchant_device WHERE device_name = $1`,
     [deviceName],
   );
   return result.rows[0];
@@ -93,7 +95,7 @@ async function getDeviceByName(deviceName) {
 
 async function getAllLocalDevices() {
   const result = await pool.query(`
-    SELECT device_name, serial_number, type, created_time, wilayah FROM tb_merchant_device
+    SELECT device_name, serial_number, type, created_time, wilayah, nama_wp FROM tb_merchant_device
   `);
 
   if (result.rowCount === 0) {

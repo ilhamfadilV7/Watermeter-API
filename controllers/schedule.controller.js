@@ -26,7 +26,7 @@ async function getAllSchedules(req, res) {
 }
 
 async function addSchedule(req, res) {
-  const { device_name, schedule, description } = req.body;
+  const { device_name, schedule, description, nama_wp } = req.body;
 
   try {
     const check = await pool.query(
@@ -43,11 +43,11 @@ async function addSchedule(req, res) {
 
     const result = await pool.query(
       `
-      INSERT INTO tb_settings (device_name, schedule, description, status) 
-      VALUES ($1, $2, $3, 'active') 
+      INSERT INTO tb_settings (device_name, schedule, description, status, nama_wp) 
+      VALUES ($1, $2, $3, 'active', $4) 
       RETURNING *
     `,
-      [device_name, schedule, description],
+      [device_name, schedule, description, nama_wp],
     );
 
     const newSetting = result.rows[0];

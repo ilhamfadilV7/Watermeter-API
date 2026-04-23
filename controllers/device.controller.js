@@ -54,12 +54,13 @@ async function registerDevice(req, res) {
       !deviceData.deviceId ||
       !deviceData.deviceName ||
       !deviceData.merchantId ||
-      !deviceData.serialNumber
+      !deviceData.serialNumber ||
+      !deviceData.nama_wp
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "deviceId, deviceName, merchantId, and serialNumber are required",
+          "deviceId, deviceName, merchantId, serialNumber, and nama_wp are required",
       });
     }
 
