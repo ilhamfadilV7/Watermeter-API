@@ -80,12 +80,12 @@ async function insertWMData(deviceId, merchantId, list, harga = 0) {
         `No. Pelanggan: ${merchantId}\n` +
         `Nomor Tagihan: ${transactionId}\n` +
         `Bulan Rekening: ${bulanRekening}\n` +
-        `Tarif: ${harga}\n` +
+        // `Tarif: ${harga}\n` +
         `Tgl. Dicatat: ${tglDicatat}\n` +
         `Cat. Meter Kini: ${valueNumber}\n` +
         `Cat. Meter Lalu: ${valueLalu}\n` +
-        `Pemakaian Air: ${increment}\n` +
-        `Total: ${grandTotal}`;
+        `Pemakaian Air: ${increment} m³\n`;
+      // `Total: ${grandTotal}`;
 
       values.push(
         transactionId,
@@ -124,12 +124,12 @@ async function forwardToExternalAPI(insertedRows) {
   const TARGET_URL = process.env.TRX_URL;
 
   for (const row of insertedRows) {
-    if (Number(row.increment) === 0 || Number(row.harga) === 0) {
-      console.log(
-        `[SKIP FORWARD TRX = 0] Trx ID: ${row.transaction_id} dilewati (Increment: ${row.increment}, Harga: ${row.harga})`,
-      );
-      continue;
-    }
+    // if (Number(row.increment) === 0 || Number(row.harga) === 0) {
+    //   console.log(
+    //     `[SKIP FORWARD TRX = 0] Trx ID: ${row.transaction_id} dilewati (Increment: ${row.increment}, Harga: ${row.harga})`,
+    //   );
+    //   continue;
+    // }
 
     const grandTotal = parseFloat(row.grand_total) || 0;
     const taxPercent = 10.0;
@@ -143,8 +143,8 @@ async function forwardToExternalAPI(insertedRows) {
       idMerchant: row.merchant_id,
       rawData: row.rawdata || "",
       trxId: row.transaction_id,
-      trxAmount: trxAmount,
-      trxTax: trxTax,
+      trxAmount: 0,
+      trxTax: 0,
       trxService: 0.0,
       trxDate: typeof row.trx_date === "string" ? row.trx_date : localTrxDate,
       taxType: "AIR BAWAH TANAH",
