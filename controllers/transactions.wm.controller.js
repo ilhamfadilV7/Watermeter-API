@@ -8,6 +8,9 @@ const {
   getHargaMap,
   forwardToExternalAPI,
   getWmPic,
+  getTransactionsDB,
+  getAllDevicesUsageChartDB,
+  getDeviceUsageChartDB,
 } = require("../services/trx.service");
 const {
   createSyncLog,
@@ -310,10 +313,169 @@ async function getPic(req, res) {
   }
 }
 
+async function getPaginatedTransactions(req, res) {
+  try {
+    // Ambil semua parameter dari query URL
+    const {
+      merchant_id,
+      start_date,
+      end_date,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    // Validasi: merchant_id wajib diisi
+    if (!merchant_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter merchant_id wajib disertakan dalam query URL.",
+      });
+    }
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Panggil service dengan parameter merchant_id
+    const { data, total, totalUsage } = await getTransactionsDB(
+      merchant_id,
+      start_date,
+      end_date,
+      limitNum,
+      offset,
+    );
+
+    const mappedData = data.map((item) => {
+      const volumeSebelumnya = item.value - item.increment;
+      return {
+        idTransaksi: item.transaction_id, // Mengubah transaction_id -> idTransaksi
+        merchant_id: item.merchant_id, // Mengubah merchant_id -> idMerchant
+        volumeSaatIni: item.value, // Mengubah value -> volumeSaatIni
+        volumeSebelumnya: volumeSebelumnya, // Menggunakan nilai sebelumnya
+        pemakaianAir: item.increment, // Mengubah increment -> kubikasiPakai
+        waktuCatat: item.created_time, // Mengubah created_time -> waktuCatat
+        fotoMeteranUrl: item.wm_pic, // Mengubah wm_pic -> fotoMeteranUrl
+        rawdata: item.rawdata, // Mengubah rawdata -> teksStrukMentah
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Data transaksi ditemukan untuk merchant ${merchant_id}`,
+      total_penggunaan: totalUsage,
+      data: mappedData,
+      pagination: {
+        total_data: total,
+        total_pages: Math.ceil(total / limitNum),
+        current_page: pageNum,
+        limit: limitNum,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "[TRX CONTROLLER] Error fetching merchant transactions:",
+      error.message,
+    );
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data transaksi merchant",
+      error: error.message,
+    });
+  }
+}
+
+//chart
+// [CONTROLLER] 1. Ambil data grafik semua device
+async function getAllDevicesUsageChart(req, res) {
+  try {
+    const { start_date, end_date } = req.query;
+
+    // Validasi range date wajib diisi untuk kebutuhan grafik yang optimal
+    if (!start_date || !end_date) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter start_date dan end_date wajib disertakan.",
+      });
+    }
+
+    const chartData = await getAllDevicesUsageChartDB(start_date, end_date);
+
+    // Hitung akumulasi total dalam rentang tersebut sebagai ringkasan tambahan
+    const grandTotal = chartData.reduce(
+      (sum, item) => sum + item.total_penggunaan,
+      0,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Data grafik penggunaan air seluruh device berhasil diambil",
+      grand_total_penggunaan: grandTotal,
+      chart_data: chartData, // Berisi array [{ tanggal: "2026-05-01", total_penggunaan: 120 }, ...]
+    });
+  } catch (error) {
+    console.error("[ANALYTICS CONTROLLER] Error all devices:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data statistik grafik",
+      error: error.message,
+    });
+  }
+}
+
+// [CONTROLLER] 2. Ambil data grafik berdasarkan device name
+async function getDeviceUsageChart(req, res) {
+  try {
+    const { merchant_id } = req.params;
+    const { start_date, end_date } = req.query;
+
+    if (!merchant_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter merchant_id pada URL wajib diisi.",
+      });
+    }
+
+    if (!start_date || !end_date) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter start_date dan end_date wajib disertakan.",
+      });
+    }
+
+    const chartData = await getDeviceUsageChartDB(
+      merchant_id,
+      start_date,
+      end_date,
+    );
+    const grandTotal = chartData.reduce(
+      (sum, item) => sum + item.total_penggunaan,
+      0,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Data grafik penggunaan air untuk merchant ${merchant_id} berhasil diambil`,
+      merchant_id: merchant_id,
+      total_penggunaan: grandTotal,
+      chart_data: chartData,
+    });
+  } catch (error) {
+    console.error("[ANALYTICS CONTROLLER] Error by merchant:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data statistik grafik merchant",
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   syncWMAllDevices,
   getTrxByDeviceName,
   forwardToExternalAPI,
   fetchDeviceSyncLogs,
   getPic,
+  getPaginatedTransactions,
+  getAllDevicesUsageChart,
+  getDeviceUsageChart,
 };

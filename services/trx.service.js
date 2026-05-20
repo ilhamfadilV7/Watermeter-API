@@ -245,10 +245,112 @@ async function getWmPic(trxid) {
   return result.rows[0];
 }
 
+//get data trx device by device name
+async function getTransactionsDB(
+  merchantId,
+  startDate,
+  endDate,
+  limit,
+  offset,
+) {
+  // Kondisi utama wajib menggunakan merchant_id
+  let query =
+    "SELECT transaction_id, merchant_id, value, increment, created_time, wm_pic, rawdata  FROM tb_trx_merchant WHERE merchant_id = $1";
+  let countQuery = `
+    SELECT 
+      COUNT(*) as total_rows, 
+      SUM(increment) as total_usage 
+    FROM tb_trx_merchant 
+    WHERE merchant_id = $1
+  `;
+
+  const values = [merchantId];
+  const countValues = [merchantId];
+
+  // Jika filter rentang tanggal diisi oleh frontend, tambahkan kondisinya secara dinamis
+  if (startDate && endDate) {
+    query += " AND created_time >= $2 AND created_time <= $3";
+    countQuery += " AND created_time >= $2 AND created_time <= $3";
+
+    values.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+    countValues.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+  }
+
+  // Menentukan indeks parameter berikutnya untuk LIMIT dan OFFSET
+  const limitIndex = values.length + 1;
+  const offsetIndex = values.length + 2;
+
+  query += ` ORDER BY created_time DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`;
+  values.push(limit, offset);
+
+  // Jalankan query secara paralel
+  const [dataResult, countResult] = await Promise.all([
+    pool.query(query, values),
+    pool.query(countQuery, countValues),
+  ]);
+  const totalRows = parseInt(countResult.rows[0].total_rows, 10);
+  const totalUsage = parseInt(countResult.rows[0].total_usage || 0, 10);
+
+  return {
+    data: dataResult.rows,
+    total: totalRows,
+    totalUsage: totalUsage,
+  };
+}
+
+//get data untuk grafik
+// 1. Query untuk seluruh device (Tren Global)
+async function getAllDevicesUsageChartDB(startDate, endDate) {
+  let query = `
+    SELECT 
+      TO_CHAR(created_time, 'YYYY-MM-DD') as tanggal,
+      SUM(increment)::INT as total_penggunaan
+    FROM tb_trx_merchant
+    WHERE 1=1
+  `;
+  const values = [];
+
+  if (startDate && endDate) {
+    query += " AND created_time >= $1 AND created_time <= $2";
+    values.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+  }
+
+  query += " GROUP BY TO_CHAR(created_time, 'YYYY-MM-DD') ORDER BY tanggal ASC";
+
+  const result = await pool.query(query, values);
+  return result.rows;
+}
+
+// 2. Query berdasarkan Device Name tertentu
+async function getDeviceUsageChartDB(deviceName, startDate, endDate) {
+  // Catatan: Sesuaikan nama kolom 'device_name' jika di database Anda menggunakan nama lain (misal: device_id)
+  let query = `
+    SELECT 
+      TO_CHAR(created_time, 'YYYY-MM-DD') as tanggal,
+      SUM(increment)::INT as total_penggunaan
+    FROM tb_trx_merchant
+    WHERE merchant_id = $1
+  `;
+  const values = [deviceName];
+
+  if (startDate && endDate) {
+    query += " AND created_time >= $2 AND created_time <= $3";
+    values.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+  }
+
+  query += " GROUP BY TO_CHAR(created_time, 'YYYY-MM-DD') ORDER BY tanggal ASC";
+
+  const result = await pool.query(query, values);
+  return result.rows;
+}
+
 module.exports = {
   insertWMData,
   getHargaMap,
   forwardToExternalAPI,
   getTrxByDevicename,
   getWmPic,
+  getTransactionsDB,
+  getAllDevicesUsageChartDB,
+  getDeviceUsageChartDB,
 };

@@ -7,6 +7,9 @@ const {
   getTrxByDeviceName,
   fetchDeviceSyncLogs,
   getPic,
+  getPaginatedTransactions,
+  getAllDevicesUsageChart,
+  getDeviceUsageChart,
 } = require("../controllers/transactions.wm.controller");
 
 const { getAllDevices } = require("../controllers/device.controller");
@@ -17,5 +20,8 @@ router.post("/wm/sync/device", getTrxByDeviceName);
 router.get("/wm/sync-logs/:deviceName", fetchDeviceSyncLogs);
 router.get("/wm/getwmPic/:trxid", getPic);
 router.get("/wm/device/all", getAllDevices);
+router.get("/wm/transactions", getPaginatedTransactions);
+router.get("/wm/analytics/all-devices", getAllDevicesUsageChart);
+router.get("/wm/analytics/device/:merchant_id", getDeviceUsageChart);
 
 module.exports = router;

@@ -1,4 +1,7 @@
-const { fetchDeviceList } = require("../services/deviceApi.service");
+const {
+  fetchDeviceList,
+  fetchDeviceInfo,
+} = require("../services/deviceApi.service");
 const {
   upsertDevices,
   insertDevice,
@@ -105,8 +108,62 @@ async function getAllDevices(req, res) {
   }
 }
 
+//get device info by device name
+async function getDeviceInfo(req, res) {
+  try {
+    const { deviceName } = req.params;
+
+    if (!deviceName) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter deviceName wajib disertakan",
+      });
+    }
+
+    // Panggil API pihak ke-3 melalui service
+    const apiResult = await fetchDeviceInfo(deviceName);
+
+    if (apiResult.code !== 200 || !apiResult.data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data perangkat tidak ditemukan dari provider Lydar",
+        error: apiResult.msg,
+      });
+    }
+
+    const rawData = apiResult.data;
+
+    // Transformasi data untuk menyederhanakan response API
+    const simplifiedData = {
+      SerialNumber: rawData.deviceName,
+      status: rawData.deviceStatus === 2 ? "Online" : "Offline",
+      batteryPercentage: rawData.electricity,
+      signalStrength: rawData.signal,
+      lastUpdated: rawData.lastTime,
+      Alamat: rawData.address,
+      NamaWp: rawData.houseNumber,
+      TotalPenggunaan: rawData.cValue,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: "Data perangkat berhasil diambil",
+      data: simplifiedData,
+    });
+  } catch (err) {
+    console.error("[DEVICE INFO] Error fetching data:", err.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data perangkat info",
+      error: err.message,
+    });
+  }
+}
+
 module.exports = {
   syncDevices,
   registerDevice,
   getAllDevices,
+  getDeviceInfo,
 };
