@@ -373,7 +373,8 @@ function kalkulasiPajakABTSkema2(totalVolume) {
   const skemaTarif = [
     { min: 0, max: 50, harga: 2100, label: "0 - 50 m³" },
     { min: 51, max: 500, harga: 2184, label: "51 - 500 m³" },
-    { min: 501, max: 2500, harga: 2300, label: "501 - 2500 m³" }, // Opsional penengah jika ada
+    { min: 501, max: 1000, harga: 2268, label: "501 - 1000 m³" },
+    { min: 1001, max: 2500, harga: 2352, label: "1001 - 2500 m³" },
     { min: 2501, max: Infinity, harga: 2436, label: "> 2500 m³" },
   ];
 
