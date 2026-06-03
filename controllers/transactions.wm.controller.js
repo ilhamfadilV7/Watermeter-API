@@ -315,37 +315,27 @@ async function getPic(req, res) {
 
 async function kalkulasiPajakABT(totalVolume) {
   let sisaVolume = totalVolume;
-  let npa = 0; // Nilai Perolehan Air
+  let npa = 0;
   const rincianTier = [];
 
-  // Konfigurasi Tarif Kelompok III (Niaga/Industri)
-  // 'batas' adalah maksimal volume yang bisa ditampung di tier tersebut
   const skemaTarif = [
     { batas: 50, harga: 2100, label: "0 - 50 m³" },
     { batas: 500, harga: 2184, label: "51 - 500 m³" },
     { batas: 1000, harga: 2268, label: "501 - 1000 m³" },
     { batas: 2500, harga: 2352, label: "1001 - 2500 m³" },
-    { batas: Infinity, harga: 2436, label: "> 2500 m³" }, // Tier terakhir menampung semua sisa volume
+    { batas: Infinity, harga: 2436, label: "> 2500 m³" },
   ];
 
   for (let i = 0; i < skemaTarif.length; i++) {
-    // Jika sisa volume sudah habis di-kalkulasi pada tier sebelumnya, hentikan loop
     if (sisaVolume <= 0) break;
-
     const tier = skemaTarif[i];
-
-    // Tentukan berapa volume yang akan dikalikan di tier ini
-    // Ambil nilai terkecil antara sisa volume vs batas maksimal tier
     const volumeKenaTarif = Math.min(sisaVolume, tier.batas);
     const subtotal = volumeKenaTarif * tier.harga;
 
-    // Tambahkan subtotal ke NPA
     npa += subtotal;
 
-    // Kurangi sisa volume dengan volume yang sudah dihitung
     sisaVolume -= volumeKenaTarif;
 
-    // Simpan rincian untuk kebutuhan struk / debugging
     rincianTier.push({
       tier: tier.label,
       volume: volumeKenaTarif,
@@ -354,7 +344,6 @@ async function kalkulasiPajakABT(totalVolume) {
     });
   }
 
-  // Hitung total pajak (20% dari NPA)
   const persenPajak = 0.2;
   const totalPajak = npa * persenPajak;
   const totalPajakRounded = Math.round(totalPajak);
@@ -369,7 +358,6 @@ async function kalkulasiPajakABT(totalVolume) {
 }
 
 function kalkulasiPajakABTSkema2(totalVolume) {
-  // 1. Definisikan batas minimal dan maksimal untuk tiap Tier beserta harganya
   const skemaTarif = [
     { min: 0, max: 50, harga: 2100, label: "0 - 50 m³" },
     { min: 51, max: 500, harga: 2184, label: "51 - 500 m³" },
@@ -378,21 +366,17 @@ function kalkulasiPajakABTSkema2(totalVolume) {
     { min: 2501, max: Infinity, harga: 2436, label: "> 2500 m³" },
   ];
 
-  // 2. Cari tier yang cocok dengan totalVolume saat ini
   const tierTerpilih = skemaTarif.find(
     (tier) => totalVolume >= tier.min && totalVolume <= tier.max,
   );
 
-  // Jika tidak ditemukan (misal input minus/invalid), set default ke tier pertama atau handle error
   if (!tierTerpilih) {
     throw new Error("Volume penggunaan tidak valid.");
   }
 
-  // 3. Hitung Nilai Perolehan Air (NPA) -> Langsung dikali total tanpa split
   const hargaSatuan = tierTerpilih.harga;
   const npa = totalVolume * hargaSatuan;
 
-  // 4. Hitung Pajak (20% dari NPA) dan lakukan pembulatan ke bawah (Math.floor)
   const persenPajak = 0.2;
   const totalPajakMurni = npa * persenPajak;
   const totalPajakBulat = Math.floor(totalPajakMurni);
@@ -403,13 +387,12 @@ function kalkulasiPajakABTSkema2(totalVolume) {
     hargaDasar: hargaSatuan,
     JumlahNilaiPerolehanAir: npa,
     pajakPersen: 20,
-    JumlahPajak: totalPajakBulat, // Hasil akhir bulat bersih
+    JumlahPajak: totalPajakBulat,
   };
 }
 
 async function getPaginatedTransactions(req, res) {
   try {
-    // Ambil semua parameter dari query URL
     const {
       merchant_id,
       start_date,
@@ -418,7 +401,6 @@ async function getPaginatedTransactions(req, res) {
       limit = 10,
     } = req.query;
 
-    // Validasi: merchant_id wajib diisi
     if (!merchant_id) {
       return res.status(400).json({
         success: false,
@@ -430,7 +412,6 @@ async function getPaginatedTransactions(req, res) {
     const limitNum = parseInt(limit, 10);
     const offset = (pageNum - 1) * limitNum;
 
-    // Panggil service dengan parameter merchant_id
     const { data, total, totalUsage } = await getTransactionsDB(
       merchant_id,
       start_date,
@@ -445,14 +426,14 @@ async function getPaginatedTransactions(req, res) {
     const mappedData = data.map((item) => {
       const volumeSebelumnya = item.value - item.increment;
       return {
-        idTransaksi: item.transaction_id, // Mengubah transaction_id -> idTransaksi
-        merchant_id: item.merchant_id, // Mengubah merchant_id -> idMerchant
-        volumeSaatIni: item.value, // Mengubah value -> volumeSaatIni
-        volumeSebelumnya: volumeSebelumnya, // Menggunakan nilai sebelumnya
-        pemakaianAir: item.increment, // Mengubah increment -> kubikasiPakai
-        waktuCatat: item.created_time, // Mengubah created_time -> waktuCatat
-        fotoMeteranUrl: item.wm_pic, // Mengubah wm_pic -> fotoMeteranUrl
-        rawdata: item.rawdata, // Mengubah rawdata -> teksStrukMentah
+        idTransaksi: item.transaction_id,
+        merchant_id: item.merchant_id,
+        volumeSaatIni: item.value,
+        volumeSebelumnya: volumeSebelumnya,
+        pemakaianAir: item.increment,
+        waktuCatat: item.created_time,
+        fotoMeteranUrl: item.wm_pic,
+        rawdata: item.rawdata,
       };
     });
 
@@ -484,12 +465,10 @@ async function getPaginatedTransactions(req, res) {
 }
 
 //chart
-// [CONTROLLER] 1. Ambil data grafik semua device
+
 async function getAllDevicesUsageChart(req, res) {
   try {
     const { start_date, end_date } = req.query;
-
-    // Validasi range date wajib diisi untuk kebutuhan grafik yang optimal
     if (!start_date || !end_date) {
       return res.status(400).json({
         success: false,
@@ -498,8 +477,6 @@ async function getAllDevicesUsageChart(req, res) {
     }
 
     const chartData = await getAllDevicesUsageChartDB(start_date, end_date);
-
-    // Hitung akumulasi total dalam rentang tersebut sebagai ringkasan tambahan
     const grandTotal = chartData.reduce(
       (sum, item) => sum + item.total_penggunaan,
       0,
@@ -509,7 +486,7 @@ async function getAllDevicesUsageChart(req, res) {
       success: true,
       message: "Data grafik penggunaan air seluruh device berhasil diambil",
       grand_total_penggunaan: grandTotal,
-      chart_data: chartData, // Berisi array [{ tanggal: "2026-05-01", total_penggunaan: 120 }, ...]
+      chart_data: chartData,
     });
   } catch (error) {
     console.error("[ANALYTICS CONTROLLER] Error all devices:", error.message);
@@ -521,7 +498,6 @@ async function getAllDevicesUsageChart(req, res) {
   }
 }
 
-// [CONTROLLER] 2. Ambil data grafik berdasarkan device name
 async function getDeviceUsageChart(req, res) {
   try {
     const { merchant_id } = req.params;

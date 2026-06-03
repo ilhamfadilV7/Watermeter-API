@@ -253,7 +253,6 @@ async function getTransactionsDB(
   limit,
   offset,
 ) {
-  // Kondisi utama wajib menggunakan merchant_id
   let query =
     "SELECT transaction_id, merchant_id, value, increment, created_time, wm_pic, rawdata  FROM tb_trx_merchant WHERE merchant_id = $1";
   let countQuery = `
@@ -267,7 +266,6 @@ async function getTransactionsDB(
   const values = [merchantId];
   const countValues = [merchantId];
 
-  // Jika filter rentang tanggal diisi oleh frontend, tambahkan kondisinya secara dinamis
   if (startDate && endDate) {
     query += " AND created_time >= $2 AND created_time <= $3";
     countQuery += " AND created_time >= $2 AND created_time <= $3";
@@ -276,14 +274,12 @@ async function getTransactionsDB(
     countValues.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
   }
 
-  // Menentukan indeks parameter berikutnya untuk LIMIT dan OFFSET
   const limitIndex = values.length + 1;
   const offsetIndex = values.length + 2;
 
   query += ` ORDER BY created_time DESC LIMIT $${limitIndex} OFFSET $${offsetIndex}`;
   values.push(limit, offset);
 
-  // Jalankan query secara paralel
   const [dataResult, countResult] = await Promise.all([
     pool.query(query, values),
     pool.query(countQuery, countValues),
@@ -298,8 +294,6 @@ async function getTransactionsDB(
   };
 }
 
-//get data untuk grafik
-// 1. Query untuk seluruh device (Tren Global)
 async function getAllDevicesUsageChartDB(startDate, endDate) {
   let query = `
     SELECT 
@@ -321,9 +315,7 @@ async function getAllDevicesUsageChartDB(startDate, endDate) {
   return result.rows;
 }
 
-// 2. Query berdasarkan Device Name tertentu
 async function getDeviceUsageChartDB(deviceName, startDate, endDate) {
-  // Catatan: Sesuaikan nama kolom 'device_name' jika di database Anda menggunakan nama lain (misal: device_id)
   let query = `
     SELECT 
       TO_CHAR(created_time, 'YYYY-MM-DD') as tanggal,
