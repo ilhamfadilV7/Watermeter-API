@@ -9,6 +9,8 @@ const {
   getAllLocalDevices,
 } = require("../services/device.service");
 
+const pool = require("../config/database");
+
 async function syncDevices(req, res) {
   try {
     let page = 1;
@@ -96,6 +98,25 @@ async function registerDevice(req, res) {
 async function getAllDevices(req, res) {
   try {
     const apiResult = await fetchDeviceList();
+    const { SiteDestination } = req.query;
+
+    if (!SiteDestination) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter SiteDestination wajib disertakan",
+      });
+    }
+
+    const query = `SELECT merchant_id, wilayah FROM tb_merchant_device WHERE wilayah = $1 LIMIT 1`;
+    const result = await pool.query(query, [SiteDestination]);
+    const device = result.rows[0];
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Device dengan SiteDestination: ${SiteDestination} tersebut tidak ditemukan di database`,
+      });
+    }
 
     if (apiResult.code !== 200 || !apiResult.data) {
       return res.status(404).json({
@@ -147,6 +168,7 @@ async function getAllDevices(req, res) {
 async function getDeviceInfo(req, res) {
   try {
     const { deviceName } = req.params;
+    const { SiteDestination } = req.query;
 
     if (!deviceName) {
       return res.status(400).json({
@@ -155,7 +177,23 @@ async function getDeviceInfo(req, res) {
       });
     }
 
-    // Panggil API pihak ke-3 melalui service
+    if (!SiteDestination) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter SiteDestination wajib disertakan",
+      });
+    }
+
+    const query = `SELECT merchant_id, wilayah FROM tb_merchant_device WHERE wilayah = $1 LIMIT 1`;
+    const result = await pool.query(query, [SiteDestination]);
+    const device = result.rows[0];
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Device dengan SiteDestination: ${SiteDestination} tersebut tidak ditemukan di database`,
+      });
+    }
+
     const apiResult = await fetchDeviceInfo(deviceName);
 
     if (apiResult.code !== 200 || !apiResult.data) {
@@ -168,7 +206,6 @@ async function getDeviceInfo(req, res) {
 
     const rawData = apiResult.data;
 
-    // Transformasi data untuk menyederhanakan response API
     const simplifiedData = {
       SerialNumber: rawData.deviceName,
       status: rawData.deviceStatus === 2 ? "Online" : "Offline",

@@ -19,6 +19,8 @@ const {
   getLogsByDeviceName,
 } = require("../services/syncLog.service");
 
+const pool = require("../config/database");
+
 async function syncWMAllDevices(req, res) {
   let logId;
   let totalFetched = 0;
@@ -400,12 +402,31 @@ async function getPaginatedTransactions(req, res) {
       end_date,
       page = 1,
       limit = 10,
+      SiteDestination,
     } = req.query;
 
     if (!merchant_id) {
       return res.status(400).json({
         success: false,
         message: "Parameter merchant_id wajib disertakan dalam query URL.",
+      });
+    }
+
+    if (!SiteDestination) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter SiteDestination wajib diisi.",
+      });
+    }
+
+    const query = `SELECT merchant_id, wilayah  FROM tb_merchant_device WHERE merchant_id = $1 AND wilayah = $2 LIMIT 1`;
+    const result = await pool.query(query, [merchant_id, SiteDestination]);
+    const device = result.rows[0];
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Merchant dengan ID ${merchant_id} dan wilayah ${SiteDestination} tidak ditemukan atau belum ada.`,
       });
     }
 
@@ -469,11 +490,29 @@ async function getPaginatedTransactions(req, res) {
 
 async function getAllDevicesUsageChart(req, res) {
   try {
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, SiteDestination } = req.query;
     if (!start_date || !end_date) {
       return res.status(400).json({
         success: false,
         message: "Parameter start_date dan end_date wajib disertakan.",
+      });
+    }
+
+    if (!SiteDestination) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter SiteDestination wajib diisi.",
+      });
+    }
+
+    const query = `SELECT wilayah FROM tb_merchant_device WHERE wilayah = $1 LIMIT 1`;
+    const result = await pool.query(query, [SiteDestination]);
+    const device = result.rows[0];
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Wilayah ${SiteDestination} tidak ditemukan atau belum ada.`,
       });
     }
 
@@ -502,7 +541,7 @@ async function getAllDevicesUsageChart(req, res) {
 async function getDeviceUsageChart(req, res) {
   try {
     const { merchant_id } = req.params;
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, SiteDestination } = req.query;
 
     if (!merchant_id) {
       return res.status(400).json({
@@ -511,10 +550,28 @@ async function getDeviceUsageChart(req, res) {
       });
     }
 
+    if (!SiteDestination) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter SiteDestination wajib diisi.",
+      });
+    }
+
     if (!start_date || !end_date) {
       return res.status(400).json({
         success: false,
         message: "Parameter start_date dan end_date wajib disertakan.",
+      });
+    }
+
+    const query = `SELECT merchant_id, wilayah  FROM tb_merchant_device WHERE merchant_id = $1 AND wilayah = $2 LIMIT 1`;
+    const result = await pool.query(query, [merchant_id, SiteDestination]);
+    const device = result.rows[0];
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Merchant dengan ID ${merchant_id} dan wilayah ${SiteDestination} tidak ditemukan atau belum ada.`,
       });
     }
 
@@ -549,12 +606,23 @@ async function getDeviceUsageChart(req, res) {
 async function getRekapTransaksiDevice(req, res) {
   try {
     const { deviceName } = req.params;
-    const { start_date, end_date } = req.query;
+    const { start_date, end_date, SiteDestination } = req.query;
 
     if (!deviceName) {
       return res.status(400).json({
         success: false,
         message: "Parameter deviceName pada URL wajib diisi.",
+      });
+    }
+
+    const query = `SELECT merchant_id, wilayah FROM tb_merchant_device WHERE merchant_id = $1 AND wilayah = $2 LIMIT 1`;
+    const result = await pool.query(query, [deviceName, SiteDestination]);
+    const device = result.rows[0];
+
+    if (!device) {
+      return res.status(404).json({
+        success: false,
+        message: `Merchant dengan nama ${deviceName} dan wilayah ${SiteDestination} tidak ditemukan atau belum ada.`,
       });
     }
 

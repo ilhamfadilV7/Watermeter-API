@@ -24,6 +24,6 @@ router.get("/wm/device/all", getAllDevices);
 router.get("/wm/transactions", getPaginatedTransactions);
 router.get("/wm/analytics/all-devices", getAllDevicesUsageChart);
 router.get("/wm/analytics/device/:merchant_id", getDeviceUsageChart);
-router.get("/wm/rekap/device/:deviceName", getRekapTransaksiDevice);
+router.get("/wm/rekap/device/:deviceName/", getRekapTransaksiDevice);
 
 module.exports = router;
