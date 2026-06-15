@@ -11,6 +11,7 @@ const {
   getTransactionsDB,
   getAllDevicesUsageChartDB,
   getDeviceUsageChartDB,
+  getRekapHarianDeviceDB,
 } = require("../services/trx.service");
 const {
   createSyncLog,
@@ -544,6 +545,54 @@ async function getDeviceUsageChart(req, res) {
   }
 }
 
+//rekap harian
+async function getRekapTransaksiDevice(req, res) {
+  try {
+    const { deviceName } = req.params;
+    const { start_date, end_date } = req.query;
+
+    if (!deviceName) {
+      return res.status(400).json({
+        success: false,
+        message: "Parameter deviceName pada URL wajib diisi.",
+      });
+    }
+
+    const rekapHarian = await getRekapHarianDeviceDB(
+      deviceName,
+      start_date,
+      end_date,
+    );
+
+    const totalKeseluruhan = rekapHarian.reduce(
+      (sum, item) => sum + (item.penggunaan_harian || 0),
+      0,
+    );
+
+    const periodeTeks =
+      start_date && end_date ? `${start_date} s/d ${end_date}` : "Semua waktu";
+
+    res.status(200).json({
+      success: true,
+      message: "Rekap transaksi berhasil ditemukan",
+      merchant_id: deviceName,
+      periode: periodeTeks,
+      total_keseluruhan_m3: totalKeseluruhan,
+      rekap_harian: rekapHarian,
+    });
+  } catch (error) {
+    console.error(
+      "[REKAP CONTROLLER] Error fetching rekap device:",
+      error.message,
+    );
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data rekap transaksi",
+      error: error.message,
+    });
+  }
+}
+
 module.exports = {
   syncWMAllDevices,
   getTrxByDeviceName,
@@ -553,4 +602,5 @@ module.exports = {
   getPaginatedTransactions,
   getAllDevicesUsageChart,
   getDeviceUsageChart,
+  getRekapTransaksiDevice,
 };

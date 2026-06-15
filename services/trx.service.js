@@ -336,6 +336,27 @@ async function getDeviceUsageChartDB(deviceName, startDate, endDate) {
   return result.rows;
 }
 
+async function getRekapHarianDeviceDB(deviceName, startDate, endDate) {
+  let query = `
+    SELECT 
+      TO_CHAR(created_time, 'YYYY-MM-DD') as tanggal,
+      SUM(increment)::INT as penggunaan_harian
+    FROM tb_trx_merchant
+    WHERE merchant_id = $1
+  `;
+  const values = [deviceName];
+
+  if (startDate && endDate) {
+    query += " AND created_time >= $2 AND created_time <= $3";
+    values.push(`${startDate} 00:00:00`, `${endDate} 23:59:59`);
+  }
+
+  query += " GROUP BY TO_CHAR(created_time, 'YYYY-MM-DD') ORDER BY tanggal ASC";
+
+  const result = await pool.query(query, values);
+  return result.rows;
+}
+
 module.exports = {
   insertWMData,
   getHargaMap,
@@ -345,4 +366,5 @@ module.exports = {
   getTransactionsDB,
   getAllDevicesUsageChartDB,
   getDeviceUsageChartDB,
+  getRekapHarianDeviceDB,
 };

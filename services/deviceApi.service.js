@@ -71,4 +71,20 @@ async function fetchDeviceInfo(deviceName) {
   return response.data;
 }
 
-module.exports = { fetchDeviceList, fetchDeviceInfo };
+async function fetchAllDeviceInfo() {
+  const formData = new URLSearchParams();
+  formData.append("access_token", await getAccessToken());
+
+  const response = await axios({
+    method: "GET",
+    url: `https://api.lydar.tech/manage/v2/device`,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    data: formData,
+  });
+
+  return response.data;
+}
+
+module.exports = { fetchDeviceList, fetchDeviceInfo, fetchAllDeviceInfo };

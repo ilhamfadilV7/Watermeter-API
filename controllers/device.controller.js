@@ -1,6 +1,7 @@
 const {
   fetchDeviceList,
   fetchDeviceInfo,
+  fetchAllDeviceInfo,
 } = require("../services/deviceApi.service");
 const {
   upsertDevices,
@@ -94,10 +95,44 @@ async function registerDevice(req, res) {
 //get all device
 async function getAllDevices(req, res) {
   try {
-    const devices = await getAllLocalDevices();
+    const apiResult = await fetchDeviceList();
+
+    if (apiResult.code !== 200 || !apiResult.data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data perangkat tidak ditemukan dari provider Lydar",
+        error: apiResult.msg,
+      });
+    }
+
+    const deviceList = apiResult.data.list || [];
+
+    const totalDevice = deviceList.length;
+    const totalAktif = deviceList.filter(
+      (device) => device.deviceStatus === 2,
+    ).length;
+    const totalOffline = totalDevice - totalAktif;
+
+    const simplifiedDevices = deviceList.map((device) => {
+      return {
+        deviceName: device.deviceName,
+        status: device.deviceStatus === 2 ? "Online" : "Offline",
+        batteryPercentage: device.electricity,
+        sinyal: device.signal,
+        lastUpdated: device.lastTime,
+        Alamat: device.address,
+        namaWp: device.houseNumber,
+      };
+    });
+
     res.json({
       success: true,
-      devices: devices,
+      info: {
+        total_aktif: totalAktif,
+        total_offline: totalOffline,
+        total_device: totalDevice,
+      },
+      devices: simplifiedDevices,
     });
   } catch (err) {
     console.error(err);
