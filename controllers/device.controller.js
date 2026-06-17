@@ -164,6 +164,68 @@ async function getAllDevices(req, res) {
   }
 }
 
+//get all local device
+async function getDevicesLocal(req, res) {
+  try {
+    const apiResult = await fetchDeviceList();
+
+    // const query = `SELECT merchant_id, wilayah FROM tb_merchant_device WHERE wilayah = $1 LIMIT 1`;
+    // const result = await pool.query(query, [SiteDestination]);
+    // const device = result.rows[0];
+
+    // if (!device) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: `Device dengan SiteDestination: ${SiteDestination} tersebut tidak ditemukan di database`,
+    //   });
+    // }
+
+    if (apiResult.code !== 200 || !apiResult.data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data perangkat tidak ditemukan dari provider Lydar",
+        error: apiResult.msg,
+      });
+    }
+
+    const deviceList = apiResult.data.list || [];
+
+    const totalDevice = deviceList.length;
+    const totalAktif = deviceList.filter(
+      (device) => device.deviceStatus === 2,
+    ).length;
+    const totalOffline = totalDevice - totalAktif;
+
+    const simplifiedDevices = deviceList.map((device) => {
+      return {
+        deviceName: device.deviceName,
+        status: device.deviceStatus === 2 ? "Online" : "Offline",
+        batteryPercentage: device.electricity,
+        sinyal: device.signal,
+        lastUpdated: device.lastTime,
+        Alamat: device.address,
+        namaWp: device.houseNumber,
+      };
+    });
+
+    res.json({
+      success: true,
+      info: {
+        total_aktif: totalAktif,
+        total_offline: totalOffline,
+        total_device: totalDevice,
+      },
+      devices: simplifiedDevices,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch devices",
+    });
+  }
+}
+
 //get device info by device name
 async function getDeviceInfo(req, res) {
   try {
@@ -238,4 +300,5 @@ module.exports = {
   registerDevice,
   getAllDevices,
   getDeviceInfo,
+  getDevicesLocal,
 };
